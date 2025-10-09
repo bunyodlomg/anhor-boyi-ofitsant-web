@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, Minus, Search, X, Check } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Search, X, Check, Clock, ChevronRight, AlertCircle } from 'lucide-react';
 
 export default function TelegramWebApp() {
   const [activeCategory, setActiveCategory] = useState('all');
@@ -8,6 +8,31 @@ export default function TelegramWebApp() {
   const [showCart, setShowCart] = useState(false);
   const [tableNumber, setTableNumber] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [view, setView] = useState('tables'); // 'tables', 'menu', 'activeOrders'
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [activeOrders, setActiveOrders] = useState([
+    {
+      id: 1,
+      table: '3',
+      items: [
+        { id: 1, name: 'Whopper', price: 35000, quantity: 2, image: '🍔' },
+        { id: 6, name: 'Coca Cola 0.5L', price: 8000, quantity: 2, image: '🥤' }
+      ],
+      total: 86000,
+      time: '14:30',
+      status: 'preparing'
+    },
+    {
+      id: 2,
+      table: '7',
+      items: [
+        { id: 4, name: 'Whopper Kombo', price: 52000, quantity: 1, image: '🍟' }
+      ],
+      total: 52000,
+      time: '14:45',
+      status: 'preparing'
+    }
+  ]);
 
   const categories = [
     { id: 'all', name: 'Hammasi', icon: '🍽️' },
@@ -30,11 +55,39 @@ export default function TelegramWebApp() {
     { id: 10, name: 'Apple Pie', price: 10000, category: 'desserts', image: '🥧', description: 'Olma pirogi' },
   ];
 
+  const tables = [
+    { number: '1', status: 'free' },
+    { number: '2', status: 'free' },
+    { number: '3', status: 'occupied' },
+    { number: '4', status: 'free' },
+    { number: '5', status: 'free' },
+    { number: '6', status: 'free' },
+    { number: '7', status: 'occupied' },
+    { number: '8', status: 'free' },
+  ];
+
   const filteredProducts = products.filter(product => {
     const matchesCategory = activeCategory === 'all' || product.category === activeCategory;
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const selectTable = (table) => {
+    setSelectedTable(table);
+    setTableNumber(table.number);
+    
+    // Agar stol band bo'lsa, mavjud buyurtmani yuklash
+    if (table.status === 'occupied') {
+      const existingOrder = activeOrders.find(order => order.table === table.number);
+      if (existingOrder) {
+        setCart(existingOrder.items);
+      }
+    } else {
+      setCart([]);
+    }
+    
+    setView('menu');
+  };
 
   const addToCart = (product) => {
     const existingItem = cart.find(item => item.id === product.id);
@@ -57,10 +110,6 @@ export default function TelegramWebApp() {
     ).filter(item => item.quantity > 0));
   };
 
-  const removeFromCart = (productId) => {
-    setCart(cart.filter(item => item.id !== productId));
-  };
-
   const getTotalPrice = () => {
     return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
@@ -74,32 +123,181 @@ export default function TelegramWebApp() {
   };
 
   const handleOrder = () => {
-    if (!tableNumber.trim()) {
-      alert('Iltimos, stol raqamini kiriting!');
-      return;
-    }
     if (cart.length === 0) {
       alert('Savatchangiz bo\'sh!');
       return;
     }
 
-    // Bu yerda API ga yuboriladi
-    console.log('Buyurtma:', {
+    // Yangi buyurtma yoki qo'shimcha buyurtma
+    const existingOrderIndex = activeOrders.findIndex(order => order.table === tableNumber);
+    
+    if (existingOrderIndex !== -1) {
+      // Mavjud buyurtmaga qo'shish
+      const updatedOrders = [...activeOrders];
+      updatedOrders[existingOrderIndex] = {
+        ...updatedOrders[existingOrderIndex],
+        items: cart,
+        total: getTotalPrice(),
+        time: new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })
+      };
+      setActiveOrders(updatedOrders);
+    } else {
+      // Yangi buyurtma
+      const newOrder = {
+        id: Date.now(),
+        table: tableNumber,
+        items: cart,
+        total: getTotalPrice(),
+        time: new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' }),
+        status: 'preparing'
+      };
+      setActiveOrders([...activeOrders, newOrder]);
+    }
+
+    console.log('Buyurtma yuborildi:', {
       table: tableNumber,
       items: cart,
       total: getTotalPrice(),
-      timestamp: new Date()
     });
 
     setShowSuccess(true);
     setTimeout(() => {
       setShowSuccess(false);
-      setCart([]);
       setShowCart(false);
-      setTableNumber('');
+      setView('tables');
+      setSelectedTable(null);
     }, 2000);
   };
 
+  const getTableStatus = (tableNumber) => {
+    return activeOrders.some(order => order.table === tableNumber) ? 'occupied' : 'free';
+  };
+
+  // Tables View
+  if (view === 'tables') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+        <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-4">
+          <h1 className="text-2xl font-bold mb-1">🍔 Burger King</h1>
+          <p className="text-sm text-red-100">Stolni tanlang</p>
+        </div>
+
+        <div className="p-4">
+          {/* Active Orders Button */}
+          {activeOrders.length > 0 && (
+            <button
+              onClick={() => setView('activeOrders')}
+              className="w-full bg-blue-600 text-white p-4 rounded-xl mb-4 flex items-center justify-between shadow-lg"
+            >
+              <div className="flex items-center gap-3">
+                <Clock className="w-6 h-6" />
+                <div className="text-left">
+                  <div className="font-bold">Faol buyurtmalar</div>
+                  <div className="text-sm text-blue-100">{activeOrders.length} ta stol</div>
+                </div>
+              </div>
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
+
+          {/* Tables Grid */}
+          <div className="grid grid-cols-3 gap-4">
+            {tables.map(table => {
+              const status = getTableStatus(table.number);
+              const order = activeOrders.find(o => o.table === table.number);
+              
+              return (
+                <button
+                  key={table.number}
+                  onClick={() => selectTable({ ...table, status })}
+                  className={`aspect-square rounded-2xl p-4 flex flex-col items-center justify-center shadow-lg transition-all ${
+                    status === 'occupied'
+                      ? 'bg-gradient-to-br from-orange-500 to-red-500 text-white'
+                      : 'bg-white text-gray-900 hover:shadow-xl'
+                  }`}
+                >
+                  <span className="text-3xl mb-2">
+                    {status === 'occupied' ? '🔴' : '🟢'}
+                  </span>
+                  <span className="text-2xl font-bold mb-1">#{table.number}</span>
+                  <span className="text-xs">
+                    {status === 'occupied' ? 'Band' : 'Bo\'sh'}
+                  </span>
+                  {order && (
+                    <div className="text-xs mt-2 bg-white bg-opacity-20 px-2 py-1 rounded">
+                      {formatPrice(order.total)}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Active Orders View
+  if (view === 'activeOrders') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+        <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-4">
+          <button
+            onClick={() => setView('tables')}
+            className="text-white mb-2 flex items-center"
+          >
+            ← Orqaga
+          </button>
+          <h1 className="text-2xl font-bold mb-1">Faol buyurtmalar</h1>
+          <p className="text-sm text-red-100">{activeOrders.length} ta stol</p>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {activeOrders.map(order => (
+            <div key={order.id} className="bg-white rounded-2xl shadow-lg p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Stol #{order.table}</h3>
+                  <p className="text-sm text-gray-500 flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    {order.time}
+                  </p>
+                </div>
+                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                  Tayyorlanmoqda
+                </span>
+              </div>
+
+              <div className="space-y-2 mb-3">
+                {order.items.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-3 text-sm">
+                    <span className="text-2xl">{item.image}</span>
+                    <span className="flex-1">{item.name}</span>
+                    <span className="text-gray-600">x{item.quantity}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t pt-3 flex items-center justify-between">
+                <span className="text-lg font-bold text-gray-900">
+                  {formatPrice(order.total)}
+                </span>
+                <button
+                  onClick={() => selectTable({ number: order.table, status: 'occupied' })}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2"
+                >
+                  Qo'shish
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Menu View
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       {/* Header */}
@@ -107,8 +305,20 @@ export default function TelegramWebApp() {
         <div className="px-4 py-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h1 className="text-2xl font-bold">🍔 Burger King</h1>
-              <p className="text-sm text-red-100">Tanlang va buyurtma bering</p>
+              <button
+                onClick={() => {
+                  setView('tables');
+                  setCart([]);
+                  setSelectedTable(null);
+                }}
+                className="text-white mb-2 flex items-center text-sm"
+              >
+                ← Orqaga
+              </button>
+              <h1 className="text-2xl font-bold">Stol #{tableNumber}</h1>
+              <p className="text-sm text-red-100">
+                {selectedTable?.status === 'occupied' ? '🔴 Mavjud buyurtmaga qo\'shish' : '🟢 Yangi buyurtma'}
+              </p>
             </div>
             <button
               onClick={() => setShowCart(true)}
@@ -122,6 +332,16 @@ export default function TelegramWebApp() {
               )}
             </button>
           </div>
+
+          {/* Warning for existing order */}
+          {selectedTable?.status === 'occupied' && (
+            <div className="bg-yellow-400 text-yellow-900 px-3 py-2 rounded-lg flex items-center gap-2 mb-3">
+              <AlertCircle className="w-5 h-5" />
+              <span className="text-sm font-medium">
+                Bu stolda buyurtma mavjud. Yangi mahsulotlar qo'shiladi.
+              </span>
+            </div>
+          )}
 
           {/* Search */}
           <div className="relative">
@@ -192,7 +412,10 @@ export default function TelegramWebApp() {
           <div className="bg-white w-full rounded-t-3xl max-h-[90vh] overflow-hidden flex flex-col">
             {/* Cart Header */}
             <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold">Savatcha ({getTotalItems()})</h2>
+              <div>
+                <h2 className="text-xl font-bold">Stol #{tableNumber}</h2>
+                <p className="text-sm text-red-100">({getTotalItems()} mahsulot)</p>
+              </div>
               <button
                 onClick={() => setShowCart(false)}
                 className="bg-white text-red-600 p-2 rounded-full"
@@ -243,13 +466,6 @@ export default function TelegramWebApp() {
             {/* Cart Footer */}
             {cart.length > 0 && (
               <div className="border-t p-4 space-y-4">
-                <input
-                  type="text"
-                  value={tableNumber}
-                  onChange={(e) => setTableNumber(e.target.value)}
-                  placeholder="Stol raqami (masalan: 5)"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-500"
-                />
                 <div className="flex items-center justify-between text-lg font-bold mb-2">
                   <span>Jami:</span>
                   <span className="text-red-600 text-2xl">{formatPrice(getTotalPrice())}</span>
@@ -258,7 +474,7 @@ export default function TelegramWebApp() {
                   onClick={handleOrder}
                   className="w-full bg-gradient-to-r from-red-600 to-orange-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all"
                 >
-                  Buyurtma berish
+                  {selectedTable?.status === 'occupied' ? 'Qo\'shimcha buyurtma berish' : 'Buyurtma berish'}
                 </button>
               </div>
             )}
@@ -274,7 +490,7 @@ export default function TelegramWebApp() {
               <Check className="w-10 h-10 text-green-600" />
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Buyurtma qabul qilindi!</h3>
-            <p className="text-gray-600">Tez orada tayyorlanadi</p>
+            <p className="text-gray-600">Stol #{tableNumber}</p>
           </div>
         </div>
       )}
