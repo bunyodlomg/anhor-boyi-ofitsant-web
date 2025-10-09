@@ -1,299 +1,309 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, ShoppingBag, Clock, Check } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Search, X, Check } from 'lucide-react';
 
-export default function RestaurantAdmin() {
-  const [activeTab, setActiveTab] = useState('orders');
-  const [products, setProducts] = useState([
-    { id: 1, name: 'Osh', price: 25000, category: 'Birinchi taomlar', available: true },
-    { id: 2, name: 'Lagman', price: 28000, category: 'Birinchi taomlar', available: true },
-    { id: 3, name: 'Somsa', price: 8000, category: 'Nonushta', available: true },
-  ]);
-  const [orders, setOrders] = useState([
-    { id: 1, table: '5', items: [{ name: 'Osh', qty: 2, price: 25000 }], status: 'pending', time: '14:30', total: 50000 },
-    { id: 2, table: '3', items: [{ name: 'Lagman', qty: 1, price: 28000 }, { name: 'Somsa', qty: 3, price: 8000 }], status: 'preparing', time: '14:25', total: 52000 },
-  ]);
-  const [showProductModal, setShowProductModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [formData, setFormData] = useState({ name: '', price: '', category: '' });
+export default function TelegramWebApp() {
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [cart, setCart] = useState([]);
+  const [showCart, setShowCart] = useState(false);
+  const [tableNumber, setTableNumber] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const handleAddProduct = () => {
-    if (editingProduct) {
-      setProducts(products.map(p => 
-        p.id === editingProduct.id 
-          ? { ...p, name: formData.name, price: Number(formData.price), category: formData.category }
-          : p
+  const categories = [
+    { id: 'all', name: 'Hammasi', icon: '🍽️' },
+    { id: 'burgers', name: 'Burgerlar', icon: '🍔' },
+    { id: 'combo', name: 'Kombo', icon: '🍟' },
+    { id: 'drinks', name: 'Ichimliklar', icon: '🥤' },
+    { id: 'desserts', name: 'Desertlar', icon: '🍰' },
+  ];
+
+  const products = [
+    { id: 1, name: 'Whopper', price: 35000, category: 'burgers', image: '🍔', description: 'Klassik Whopper burger' },
+    { id: 2, name: 'Double Whopper', price: 45000, category: 'burgers', image: '🍔', description: 'Ikki qatlamli go\'sht' },
+    { id: 3, name: 'Chicken Royale', price: 32000, category: 'burgers', image: '🍗', description: 'Tovuqli burger' },
+    { id: 4, name: 'Whopper Kombo', price: 52000, category: 'combo', image: '🍟', description: 'Burger + fri + ichimlik' },
+    { id: 5, name: 'King Kombo', price: 58000, category: 'combo', image: '🍟', description: 'Katta kombo set' },
+    { id: 6, name: 'Coca Cola 0.5L', price: 8000, category: 'drinks', image: '🥤', description: 'Sovuq ichimlik' },
+    { id: 7, name: 'Fanta 0.5L', price: 8000, category: 'drinks', image: '🥤', description: 'Apelsinli ichimlik' },
+    { id: 8, name: 'Ayran', price: 7000, category: 'drinks', image: '🥛', description: 'Tabiiy ayran' },
+    { id: 9, name: 'Muzqaymoq', price: 12000, category: 'desserts', image: '🍦', description: 'Shokoladli muzqaymoq' },
+    { id: 10, name: 'Apple Pie', price: 10000, category: 'desserts', image: '🥧', description: 'Olma pirogi' },
+  ];
+
+  const filteredProducts = products.filter(product => {
+    const matchesCategory = activeCategory === 'all' || product.category === activeCategory;
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const addToCart = (product) => {
+    const existingItem = cart.find(item => item.id === product.id);
+    if (existingItem) {
+      setCart(cart.map(item =>
+        item.id === product.id
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
       ));
     } else {
-      const newProduct = {
-        id: Date.now(),
-        name: formData.name,
-        price: Number(formData.price),
-        category: formData.category,
-        available: true
-      };
-      setProducts([...products, newProduct]);
+      setCart([...cart, { ...product, quantity: 1 }]);
     }
-    setShowProductModal(false);
-    setEditingProduct(null);
-    setFormData({ name: '', price: '', category: '' });
   };
 
-  const handleEditProduct = (product) => {
-    setEditingProduct(product);
-    setFormData({ name: product.name, price: product.price, category: product.category });
-    setShowProductModal(true);
+  const updateQuantity = (productId, change) => {
+    setCart(cart.map(item =>
+      item.id === productId
+        ? { ...item, quantity: Math.max(0, item.quantity + change) }
+        : item
+    ).filter(item => item.quantity > 0));
   };
 
-  const handleDeleteProduct = (id) => {
-    setProducts(products.filter(p => p.id !== id));
+  const removeFromCart = (productId) => {
+    setCart(cart.filter(item => item.id !== productId));
   };
 
-  const handleOrderStatus = (orderId, newStatus) => {
-    setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+  const getTotalPrice = () => {
+    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  };
+
+  const getTotalItems = () => {
+    return cart.reduce((sum, item) => sum + item.quantity, 0);
   };
 
   const formatPrice = (price) => {
     return price.toLocaleString('uz-UZ') + " so'm";
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      preparing: 'bg-blue-100 text-blue-800',
-      completed: 'bg-green-100 text-green-800'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
+  const handleOrder = () => {
+    if (!tableNumber.trim()) {
+      alert('Iltimos, stol raqamini kiriting!');
+      return;
+    }
+    if (cart.length === 0) {
+      alert('Savatchangiz bo\'sh!');
+      return;
+    }
 
-  const getStatusText = (status) => {
-    const texts = {
-      pending: 'Kutilmoqda',
-      preparing: 'Tayyorlanmoqda',
-      completed: 'Tayyor'
-    };
-    return texts[status] || status;
+    // Bu yerda API ga yuboriladi
+    console.log('Buyurtma:', {
+      table: tableNumber,
+      items: cart,
+      total: getTotalPrice(),
+      timestamp: new Date()
+    });
+
+    setShowSuccess(true);
+    setTimeout(() => {
+      setShowSuccess(false);
+      setCart([]);
+      setShowCart(false);
+      setTableNumber('');
+    }, 2000);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-gray-900">🍽️ Oshxona Boshqaruv Paneli</h1>
+      <div className="sticky top-0 z-40 bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-lg">
+        <div className="px-4 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h1 className="text-2xl font-bold">🍔 Burger King</h1>
+              <p className="text-sm text-red-100">Tanlang va buyurtma bering</p>
+            </div>
+            <button
+              onClick={() => setShowCart(true)}
+              className="relative bg-white text-red-600 p-3 rounded-full shadow-lg hover:shadow-xl transition-all"
+            >
+              <ShoppingCart className="w-6 h-6" />
+              {getTotalItems() > 0 && (
+                <span className="absolute -top-2 -right-2 bg-yellow-400 text-red-900 text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-md">
+                  {getTotalItems()}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Qidirish..."
+              className="w-full pl-10 pr-4 py-3 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 shadow-md"
+            />
+          </div>
+        </div>
+
+        {/* Categories */}
+        <div className="overflow-x-auto px-4 pb-3 hide-scrollbar">
+          <div className="flex gap-2">
+            {categories.map(category => (
+              <button
+                key={category.id}
+                onClick={() => setActiveCategory(category.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap font-medium transition-all ${
+                  activeCategory === category.id
+                    ? 'bg-white text-red-600 shadow-lg scale-105'
+                    : 'bg-red-500 text-white hover:bg-red-400'
+                }`}
+              >
+                <span>{category.icon}</span>
+                <span>{category.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex gap-4 mb-6">
-          <button
-            onClick={() => setActiveTab('orders')}
-            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-              activeTab === 'orders'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <ShoppingBag className="inline-block w-5 h-5 mr-2" />
-            Buyurtmalar
-          </button>
-          <button
-            onClick={() => setActiveTab('products')}
-            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-              activeTab === 'products'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            Mahsulotlar
-          </button>
-        </div>
-
-        {/* Orders Tab */}
-        {activeTab === 'orders' && (
-          <div className="grid gap-4">
-            {orders.map(order => (
-              <div key={order.id} className="bg-white rounded-lg shadow-sm border p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">Stol #{order.table}</h3>
-                    <p className="text-sm text-gray-500 flex items-center mt-1">
-                      <Clock className="w-4 h-4 mr-1" />
-                      {order.time}
-                    </p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
-                    {getStatusText(order.status)}
-                  </span>
+      {/* Products Grid */}
+      <div className="p-4 pb-24">
+        <div className="grid grid-cols-2 gap-4">
+          {filteredProducts.map(product => (
+            <div
+              key={product.id}
+              className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all overflow-hidden"
+            >
+              <div className="bg-gradient-to-br from-yellow-100 to-orange-100 p-8 flex items-center justify-center">
+                <span className="text-6xl">{product.image}</span>
+              </div>
+              <div className="p-4">
+                <h3 className="font-bold text-gray-900 mb-1">{product.name}</h3>
+                <p className="text-xs text-gray-500 mb-3">{product.description}</p>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-red-600">{formatPrice(product.price)}</span>
+                  <button
+                    onClick={() => addToCart(product)}
+                    className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-2 rounded-full hover:shadow-lg transition-all"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
                 </div>
-                
-                <div className="space-y-2 mb-4">
-                  {order.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between text-gray-700">
-                      <span>{item.name} x{item.qty}</span>
-                      <span className="font-medium">{formatPrice(item.price * item.qty)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Cart Modal */}
+      {showCart && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
+          <div className="bg-white w-full rounded-t-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Cart Header */}
+            <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold">Savatcha ({getTotalItems()})</h2>
+              <button
+                onClick={() => setShowCart(false)}
+                className="bg-white text-red-600 p-2 rounded-full"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Cart Items */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {cart.length === 0 ? (
+                <div className="text-center py-12">
+                  <span className="text-6xl mb-4 block">🛒</span>
+                  <p className="text-gray-500">Savatchangiz bo'sh</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cart.map(item => (
+                    <div key={item.id} className="bg-gray-50 rounded-xl p-4 flex items-center gap-4">
+                      <div className="bg-white rounded-lg p-3 text-3xl">
+                        {item.image}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-gray-900">{item.name}</h3>
+                        <p className="text-red-600 font-medium">{formatPrice(item.price)}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateQuantity(item.id, -1)}
+                          className="bg-red-100 text-red-600 p-2 rounded-lg hover:bg-red-200"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="font-bold text-lg w-8 text-center">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.id, 1)}
+                          className="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
 
-                <div className="border-t pt-4 flex justify-between items-center">
-                  <span className="text-lg font-bold text-gray-900">
-                    Jami: {formatPrice(order.total)}
-                  </span>
-                  <div className="flex gap-2">
-                    {order.status === 'pending' && (
-                      <button
-                        onClick={() => handleOrderStatus(order.id, 'preparing')}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        Tayyorlashni boshlash
-                      </button>
-                    )}
-                    {order.status === 'preparing' && (
-                      <button
-                        onClick={() => handleOrderStatus(order.id, 'completed')}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
-                      >
-                        <Check className="w-4 h-4 mr-1" />
-                        Tayyor
-                      </button>
-                    )}
-                  </div>
+            {/* Cart Footer */}
+            {cart.length > 0 && (
+              <div className="border-t p-4 space-y-4">
+                <input
+                  type="text"
+                  value={tableNumber}
+                  onChange={(e) => setTableNumber(e.target.value)}
+                  placeholder="Stol raqami (masalan: 5)"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-500"
+                />
+                <div className="flex items-center justify-between text-lg font-bold mb-2">
+                  <span>Jami:</span>
+                  <span className="text-red-600 text-2xl">{formatPrice(getTotalPrice())}</span>
                 </div>
+                <button
+                  onClick={handleOrder}
+                  className="w-full bg-gradient-to-r from-red-600 to-orange-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all"
+                >
+                  Buyurtma berish
+                </button>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Products Tab */}
-        {activeTab === 'products' && (
-          <div>
-            <div className="mb-6 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-900">Mahsulotlar ro'yxati</h2>
-              <button
-                onClick={() => {
-                  setEditingProduct(null);
-                  setFormData({ name: '', price: '', category: '' });
-                  setShowProductModal(true);
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Yangi mahsulot
-              </button>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Nomi</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Kategoriya</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Narxi</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Holati</th>
-                    <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">Amallar</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {products.map(product => (
-                    <tr key={product.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-gray-900 font-medium">{product.name}</td>
-                      <td className="px-6 py-4 text-gray-600">{product.category}</td>
-                      <td className="px-6 py-4 text-gray-900">{formatPrice(product.price)}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          product.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {product.available ? 'Mavjud' : 'Tugagan'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => handleEditProduct(product)}
-                          className="text-blue-600 hover:text-blue-800 mr-3"
-                        >
-                          <Edit2 className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProduct(product.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Product Modal */}
-      {showProductModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              {editingProduct ? 'Mahsulotni tahrirlash' : 'Yangi mahsulot qo\'shish'}
-            </h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nomi</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Masalan: Osh"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kategoriya</label>
-                <input
-                  type="text"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Masalan: Birinchi taomlar"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Narxi (so'm)</label>
-                <input
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="25000"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowProductModal(false);
-                  setEditingProduct(null);
-                  setFormData({ name: '', price: '', category: '' });
-                }}
-                className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Bekor qilish
-              </button>
-              <button
-                onClick={handleAddProduct}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                {editingProduct ? 'Saqlash' : 'Qo\'shish'}
-              </button>
-            </div>
+            )}
           </div>
         </div>
       )}
+
+      {/* Success Modal */}
+      {showSuccess && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 text-center max-w-sm animate-bounce-in">
+            <div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="w-10 h-10 text-green-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Buyurtma qabul qilindi!</h3>
+            <p className="text-gray-600">Tez orada tayyorlanadi</p>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        @keyframes bounce-in {
+          0% {
+            transform: scale(0.3);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.05);
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        .animate-bounce-in {
+          animation: bounce-in 0.5s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
