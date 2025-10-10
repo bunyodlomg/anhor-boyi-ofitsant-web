@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Plus, Minus, Search, X, Check, Clock, ChevronRight, AlertCircle } from 'lucide-react';
 
 export default function TelegramWebApp() {
+
+  useEffect(() => {
+    if (window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.expand(); // 🔥 Fullscreen ochish
+      tg.ready();  // WebApp tayyorligini bildiradi
+    }
+  }, []);
+
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState([]);
@@ -75,7 +84,7 @@ export default function TelegramWebApp() {
   const selectTable = (table) => {
     setSelectedTable(table);
     setTableNumber(table.number);
-    
+
     // Agar stol band bo'lsa, mavjud buyurtmani yuklash
     if (table.status === 'occupied') {
       const existingOrder = activeOrders.find(order => order.table === table.number);
@@ -85,7 +94,7 @@ export default function TelegramWebApp() {
     } else {
       setCart([]);
     }
-    
+
     setView('menu');
   };
 
@@ -130,7 +139,7 @@ export default function TelegramWebApp() {
 
     // Yangi buyurtma yoki qo'shimcha buyurtma
     const existingOrderIndex = activeOrders.findIndex(order => order.table === tableNumber);
-    
+
     if (existingOrderIndex !== -1) {
       // Mavjud buyurtmaga qo'shish
       const updatedOrders = [...activeOrders];
@@ -205,16 +214,15 @@ export default function TelegramWebApp() {
             {tables.map(table => {
               const status = getTableStatus(table.number);
               const order = activeOrders.find(o => o.table === table.number);
-              
+
               return (
                 <button
                   key={table.number}
                   onClick={() => selectTable({ ...table, status })}
-                  className={`aspect-square rounded-2xl p-4 flex flex-col items-center justify-center shadow-lg transition-all ${
-                    status === 'occupied'
-                      ? 'bg-gradient-to-br from-orange-500 to-red-500 text-white'
-                      : 'bg-white text-gray-900 hover:shadow-xl'
-                  }`}
+                  className={`aspect-square rounded-2xl p-4 flex flex-col items-center justify-center shadow-lg transition-all ${status === 'occupied'
+                    ? 'bg-gradient-to-br from-orange-500 to-red-500 text-white'
+                    : 'bg-white text-gray-900 hover:shadow-xl'
+                    }`}
                 >
                   <span className="text-3xl mb-2">
                     {status === 'occupied' ? '🔴' : '🟢'}
@@ -363,11 +371,10 @@ export default function TelegramWebApp() {
               <button
                 key={category.id}
                 onClick={() => setActiveCategory(category.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap font-medium transition-all ${
-                  activeCategory === category.id
-                    ? 'bg-white text-red-600 shadow-lg scale-105'
-                    : 'bg-red-500 text-white hover:bg-red-400'
-                }`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap font-medium transition-all ${activeCategory === category.id
+                  ? 'bg-white text-red-600 shadow-lg scale-105'
+                  : 'bg-red-500 text-white hover:bg-red-400'
+                  }`}
               >
                 <span>{category.icon}</span>
                 <span>{category.name}</span>
