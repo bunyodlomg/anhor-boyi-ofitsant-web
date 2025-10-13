@@ -1,17 +1,29 @@
-import React from "react";
-import { Routes, Route } from "react-router-dom";
+// App.jsx
+import React, { useState } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Navbar from "./components/Navbar";
 import Tables from "./pages/Tables";
 import Menu from "./pages/Menu";
 import Cart from "./pages/Cart";
+import MenuPage from "./pages/Menus";
 
-export default function App() {
+function App() {
+  const [cart, setCart] = useState([]);
+
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-800">
+    <>
+      <Navbar cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} />
+
       <Routes>
-        <Route path="/" element={<Tables />} />
-        <Route path="/menu/:tableId" element={<Menu />} />
+        {/* Dastur ochilganda avtomatik /tables sahifasiga yo‘naltiradi */}
+        <Route path="/" element={<Navigate to="/tables" replace />} />
+        <Route path="/tables" element={<Tables />} />
+        <Route path="/menu/:tableId" element={<Menu setCart={setCart} />} />
         <Route path="/cart/:tableId" element={<Cart />} />
+        <Route path="/menupage" element={<MenuPage />} />
       </Routes>
-    </div>
+    </>
   );
 }
+
+export default App;
