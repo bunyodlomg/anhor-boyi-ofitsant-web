@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import ProductCard from "../components/ProductCard";
+const apiUrl = import.meta.env.VITE_API_URL;
 
 export default function MenuPage() {
     const [products, setProducts] = useState([]);
@@ -8,27 +9,27 @@ export default function MenuPage() {
     const [category, setCategory] = useState("all"); // default: barcha
 
     useEffect(() => {
-        axios.get("http://localhost:5000/api/products")
+        axios.get(`${apiUrl}/api/products`)
             .then(res => setProducts(res.data))
             .catch(err => console.log(err));
     }, []);
 
-    const handleAdd = (product) => {
-        setCart(prev => ({
-            ...prev,
-            [product._id]: prev[product._id] ? prev[product._id] + 1 : 1
-        }));
-    };
+    // const handleAdd = (product) => {
+    //     setCart(prev => ({
+    //         ...prev,
+    //         [product._id]: prev[product._id] ? prev[product._id] + 1 : 1
+    //     }));
+    // };
 
-    const handleRemove = (product) => {
-        setCart(prev => {
-            if (!prev[product._id]) return prev;
-            const updated = { ...prev };
-            updated[product._id]--;
-            if (updated[product._id] === 0) delete updated[product._id];
-            return updated;
-        });
-    };
+    // const handleRemove = (product) => {
+    //     setCart(prev => {
+    //         if (!prev[product._id]) return prev;
+    //         const updated = { ...prev };
+    //         updated[product._id]--;
+    //         if (updated[product._id] === 0) delete updated[product._id];
+    //         return updated;
+    //     });
+    // };
 
     // Filtrlash
     const filteredProducts = category === "all"
@@ -38,8 +39,8 @@ export default function MenuPage() {
     return (
         <div className="p-6">
             {/* Category filter */}
-            <div className="flex space-x-4 mb-4">
-                {["all", "Ovqat", "Salat", "Ichimlik"].map(cat => (
+            <div className="flex space-x-4 mb-4 overflow-x-scroll">
+                {["all", "Taomlar", "Kaboblar", "Salat", "Ichimlik", "Desertlar"].map(cat => (
                     <button
                         key={cat}
                         onClick={() => setCategory(cat)}
